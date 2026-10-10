@@ -27,12 +27,16 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools,platforms;android-35,build-tools;35.0.0'
+          accept-android-sdk-licenses: true
 
       - name: Prepare app
         run: |
           mkdir -p civora-android/www
           cp index.html civora-android/www/
-          cp manifest.webmanifest civora-android/www/
+          if [ -f manifest.webmanifest ]; then cp manifest.webmanifest civora-android/www/; fi
+          if [ -f service-worker.js ]; then cp service-worker.js civora-android/www/; fi
           cd civora-android
           npm init -y
           npm install @capacitor/core @capacitor/android
@@ -53,4 +57,5 @@ jobs:
         with:
           name: civora-android-debug-apk
           path: civora-android/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
           retention-days: 14
