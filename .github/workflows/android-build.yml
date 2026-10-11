@@ -1,52 +1,57 @@
-
 name: Build Civora Android APK
-
 on:
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   build-android:
     runs-on: ubuntu-24.04
-
     steps:
       - name: Checkout Civora
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
-
-      - name: Check Android SDK
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install Android packages
         run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          ls -la "$ANDROID_HOME"
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-
+          sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
       - name: Prepare Civora
         run: |
           mkdir -p civora-android/www
           cp index.html civora-android/www/
-          if [ -f manifest.webmanifest ]; then cp manifest.webmanifest civora-android/www/; fi
-          if [ -f service-worker.js ]; then cp service-worker.js civora-android/www/; fi
+          if [ -f manifest.webmanifest ]; then
+            cp manifest.webmanifest civora-android/www/
+          fi
+          if [ -f service-worker.js ]; then
+            cp service-worker.js civora-android/www/
+          fi
           cd civora-android
           npm init -y
           npm install @capacitor/core @capacitor/android
           npm install --save-dev @capacitor/cli
           echo '{"appId":"com.civora.study","appName":"Civora","webDir":"www"}' > capacitor.config.json
           npx cap add android
-
+          cat >> android/build.gradle <<'GRADLE'
+          allprojects {
+              configurations.configureEach {
+                  resolutionStrategy.eachDependency { details ->
+                      if (details.requested.group == 'org.jetbrains.kotlin' &&
+                          details.requested.name.startsWith('kotlin-stdlib')) {
+                          details.useVersion '1.8.22'
+                      }
+                  }
+              }
+          }
+          GRADLE
       - name: Build APK
         run: |
           cd civora-android
@@ -54,7 +59,6 @@ jobs:
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
-
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
