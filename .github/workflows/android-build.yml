@@ -21,11 +21,18 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
       - name: Install Android packages
+        shell: bash
         run: |
-          sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          set -e
+          yes | sdkmanager --licenses || true
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
       - name: Prepare Civora
+        shell: bash
         run: |
+          set -e
           mkdir -p civora-android/www
           cp index.html civora-android/www/
           if [ -f manifest.webmanifest ]; then
@@ -53,7 +60,9 @@ jobs:
           }
           GRADLE
       - name: Build APK
+        shell: bash
         run: |
+          set -e
           cd civora-android
           npx cap sync android
           cd android
